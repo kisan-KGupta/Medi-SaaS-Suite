@@ -97,6 +97,12 @@ export default function Login() {
               >
                 {loginMutation.isPending ? "Signing in..." : "Sign in to Workspace"}
               </Button>
+
+              <div className="mt-4 rounded-md bg-muted/60 border px-4 py-3 text-xs text-muted-foreground space-y-0.5">
+                <div className="font-semibold text-foreground/70 mb-1">Default credentials</div>
+                <div>Admin — username: <span className="font-mono font-semibold text-foreground">admin</span> &nbsp;/&nbsp; password: <span className="font-mono font-semibold text-foreground">admin123</span></div>
+                <div>Cashier — username: <span className="font-mono font-semibold text-foreground">cashier</span> &nbsp;/&nbsp; password: <span className="font-mono font-semibold text-foreground">cashier123</span></div>
+              </div>
             </form>
           </Form>
         </CardContent>
