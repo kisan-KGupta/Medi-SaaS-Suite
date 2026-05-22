@@ -39,11 +39,11 @@ export default function Login() {
         login(response.token);
         setLocation("/dashboard");
       },
-      onError: (error) => {
+      onError: (err: any) => {
         toast({
           variant: "destructive",
           title: "Login Failed",
-          description: error.error || "Please check your credentials and try again.",
+          description: err?.data?.error ?? err?.message ?? "Please check your credentials and try again.",
         });
       }
     });
