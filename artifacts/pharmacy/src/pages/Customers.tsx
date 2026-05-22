@@ -5,16 +5,33 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Search, Plus, UserCircle } from "lucide-react";
+import AddCustomerDialog from "@/components/AddCustomerDialog";
+import RecordPaymentDialog from "@/components/RecordPaymentDialog";
+
+interface PaymentTarget { id: number; name: string; creditBalance: number; }
 
 export default function Customers() {
   const [search, setSearch] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [paymentTarget, setPaymentTarget] = useState<PaymentTarget | null>(null);
   const { data: customers, isLoading } = useListCustomers({ search });
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-7xl mx-auto">
+      <AddCustomerDialog open={showAdd} onClose={() => setShowAdd(false)} />
+      {paymentTarget && (
+        <RecordPaymentDialog
+          open={true}
+          onClose={() => setPaymentTarget(null)}
+          customerId={paymentTarget.id}
+          customerName={paymentTarget.name}
+          creditBalance={paymentTarget.creditBalance}
+        />
+      )}
+
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Customers</h1>
-        <Button size="sm" className="shrink-0">
+        <Button size="sm" className="shrink-0" onClick={() => setShowAdd(true)}>
           <Plus className="w-4 h-4 md:mr-2" />
           <span className="hidden md:inline">Add Customer</span>
         </Button>
@@ -38,7 +55,7 @@ export default function Customers() {
               <TableHead className="min-w-[110px] hidden sm:table-cell">Contact</TableHead>
               <TableHead className="min-w-[110px] hidden md:table-cell">Member Since</TableHead>
               <TableHead className="text-right min-w-[120px]">Credit Balance</TableHead>
-              <TableHead className="text-right min-w-[120px] hidden sm:table-cell">Actions</TableHead>
+              <TableHead className="text-right min-w-[130px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -69,9 +86,14 @@ export default function Customers() {
                       {formatCurrency(customer.creditBalance)}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right hidden sm:table-cell">
+                  <TableCell className="text-right">
                     {customer.creditBalance > 0 && (
-                      <Button variant="outline" size="sm" className="text-primary border-primary hover:bg-primary hover:text-white text-xs">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-primary border-primary hover:bg-primary hover:text-white text-xs"
+                        onClick={() => setPaymentTarget({ id: customer.id, name: customer.name, creditBalance: customer.creditBalance })}
+                      >
                         Record Payment
                       </Button>
                     )}

@@ -6,9 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Search, Plus } from "lucide-react";
+import AddMedicineDialog from "@/components/AddMedicineDialog";
 
 export default function Inventory() {
   const [search, setSearch] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
   const { data: medicines, isLoading } = useListMedicines({ search });
 
   const getExpiryColor = (status: string) => {
@@ -19,9 +21,11 @@ export default function Inventory() {
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-7xl mx-auto">
+      <AddMedicineDialog open={showAdd} onClose={() => setShowAdd(false)} />
+
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Inventory</h1>
-        <Button size="sm" className="shrink-0">
+        <Button size="sm" className="shrink-0" onClick={() => setShowAdd(true)}>
           <Plus className="w-4 h-4 md:mr-2" />
           <span className="hidden md:inline">Add Medicine</span>
         </Button>

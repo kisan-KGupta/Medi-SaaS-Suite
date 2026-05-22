@@ -1,17 +1,22 @@
+import { useState } from "react";
 import { useListPurchases } from "@workspace/api-client-react";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import NewPurchaseDialog from "@/components/NewPurchaseDialog";
 
 export default function Purchases() {
+  const [showNew, setShowNew] = useState(false);
   const { data: purchases, isLoading } = useListPurchases();
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-7xl mx-auto">
+      <NewPurchaseDialog open={showNew} onClose={() => setShowNew(false)} />
+
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Purchases</h1>
-        <Button size="sm" className="shrink-0">
+        <Button size="sm" className="shrink-0" onClick={() => setShowNew(true)}>
           <Plus className="w-4 h-4 md:mr-2" />
           <span className="hidden md:inline">New Purchase</span>
         </Button>

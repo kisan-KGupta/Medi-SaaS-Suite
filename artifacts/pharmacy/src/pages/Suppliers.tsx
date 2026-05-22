@@ -1,17 +1,22 @@
+import { useState } from "react";
 import { useListSuppliers } from "@workspace/api-client-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { Plus, Building2, Phone, Mail } from "lucide-react";
+import AddSupplierDialog from "@/components/AddSupplierDialog";
 
 export default function Suppliers() {
+  const [showAdd, setShowAdd] = useState(false);
   const { data: suppliers, isLoading } = useListSuppliers();
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-7xl mx-auto">
+      <AddSupplierDialog open={showAdd} onClose={() => setShowAdd(false)} />
+
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Suppliers</h1>
-        <Button size="sm" className="shrink-0">
+        <Button size="sm" className="shrink-0" onClick={() => setShowAdd(true)}>
           <Plus className="w-4 h-4 md:mr-2" />
           <span className="hidden md:inline">Add Supplier</span>
         </Button>
