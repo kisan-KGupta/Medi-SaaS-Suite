@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarIcon, Printer } from "lucide-react";
 import Invoice from "@/components/Invoice";
-import { useQueryClient } from "@tanstack/react-query";
 
 function SaleInvoiceLoader({ saleId, onClose }: { saleId: number; onClose: () => void }) {
   const { data: sale, isLoading } = useGetSale(saleId, {
@@ -41,31 +40,28 @@ export default function Sales() {
         <SaleInvoiceLoader saleId={printSaleId} onClose={() => setPrintSaleId(null)} />
       )}
 
-      <div className="space-y-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight text-primary">Sales History</h1>
-        </div>
+      <div className="space-y-4 md:space-y-6 max-w-7xl mx-auto">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Sales History</h1>
 
-        <div className="flex gap-4 items-center flex-wrap">
+        {/* Date filters */}
+        <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+            <CalendarIcon className="w-4 h-4 text-muted-foreground shrink-0" />
             <Input
               type="date"
               value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="w-40"
-              data-testid="input-start-date"
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-36 md:w-40"
             />
           </div>
-          <span className="text-muted-foreground">to</span>
+          <span className="text-muted-foreground text-sm">to</span>
           <div className="flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+            <CalendarIcon className="w-4 h-4 text-muted-foreground shrink-0" />
             <Input
               type="date"
               value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="w-40"
-              data-testid="input-end-date"
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-36 md:w-40"
             />
           </div>
           {(startDate || endDate) && (
@@ -75,16 +71,16 @@ export default function Sales() {
           )}
         </div>
 
-        <div className="border rounded-md bg-card">
+        <div className="overflow-x-auto rounded-md border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Bill No.</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead className="text-right">Total (NPR)</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-center">Invoice</TableHead>
+                <TableHead className="min-w-[120px]">Bill No.</TableHead>
+                <TableHead className="min-w-[100px]">Date</TableHead>
+                <TableHead className="min-w-[120px] hidden sm:table-cell">Customer</TableHead>
+                <TableHead className="text-right min-w-[100px]">Total (NPR)</TableHead>
+                <TableHead className="text-center min-w-[80px]">Status</TableHead>
+                <TableHead className="text-center min-w-[70px]">Invoice</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -99,11 +95,14 @@ export default function Sales() {
                   </TableCell>
                 </TableRow>
               ) : (
-                sales.map(sale => (
-                  <TableRow key={sale.id} data-testid={`row-sale-${sale.id}`}>
-                    <TableCell className="font-mono font-medium text-xs">{sale.billNumber}</TableCell>
-                    <TableCell>{formatDate(sale.saleDate)}</TableCell>
-                    <TableCell>
+                sales.map((sale) => (
+                  <TableRow key={sale.id}>
+                    <TableCell className="font-mono text-xs font-medium">
+                      <div>{sale.billNumber}</div>
+                      <div className="text-muted-foreground sm:hidden">{sale.customerName || "Walk-in"}</div>
+                    </TableCell>
+                    <TableCell className="text-sm">{formatDate(sale.saleDate)}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {sale.customerName ? (
                         <div>
                           <div className="font-medium">{sale.customerName}</div>
@@ -116,21 +115,20 @@ export default function Sales() {
                     <TableCell className="text-right font-semibold">{formatCurrency(sale.totalAmount)}</TableCell>
                     <TableCell className="text-center">
                       {sale.isCredit ? (
-                        <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">Credit</Badge>
+                        <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200 text-xs">Credit</Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Paid</Badge>
+                        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 text-xs">Paid</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-center">
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="gap-1.5 text-xs text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                        className="gap-1 text-xs text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-2"
                         onClick={() => setPrintSaleId(sale.id)}
-                        data-testid={`button-print-${sale.id}`}
                       >
                         <Printer className="w-3.5 h-3.5" />
-                        Print
+                        <span className="hidden sm:inline">Print</span>
                       </Button>
                     </TableCell>
                   </TableRow>
