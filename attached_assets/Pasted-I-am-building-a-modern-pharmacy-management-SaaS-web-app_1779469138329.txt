@@ -1,0 +1,370 @@
+I am building a modern pharmacy management SaaS web application for a real pharmacy business called “Sanjay Medical” located at Horizon Chowk, Butwal, Nepal.
+
+The goal is NOT to build a complicated enterprise ERP. The goal is to build a modern, ultra-simple, fast, beautiful, and practical pharmacy operating system optimized for Nepalese pharmacies.
+
+The application should focus heavily on:
+- simplicity
+- speed
+- clean UI/UX
+- inventory management
+- expiry tracking
+- billing efficiency
+- mobile responsiveness
+- modern dashboard experience
+- local Nepal workflow
+
+Target users:
+- pharmacy owners
+- cashiers
+- inventory managers
+
+The UI should feel:
+- premium
+- minimal
+- modern SaaS
+- easy enough for non-technical pharmacy staff
+- faster than traditional pharmacy software used in Nepal
+
+Tech Stack:
+- ASP.NET Core Web API (.NET 9)
+- Blazor Web App (.NET 9)
+- PostgreSQL
+- Entity Framework Core
+- JWT Authentication
+- Clean Architecture
+- Repository Pattern
+- Responsive Dashboard Layout
+- Tailwind CSS or modern UI styling
+- Chart components for analytics
+
+==================================================
+CORE MODULES
+==================================================
+
+1. Authentication & User Roles
+- Secure Login
+- JWT Authentication
+- Role-based access
+- Roles:
+  - Admin
+  - Cashier
+  - Inventory Manager
+
+Features:
+- login/logout
+- remember me
+- password reset
+- session timeout
+- activity logs
+
+==================================================
+2. Dashboard Overview
+==================================================
+
+Create a modern analytics dashboard showing:
+- Today Sales
+- Weekly Sales
+- Monthly Sales
+- Profit Summary
+- Low Stock Medicines
+- Expiring Soon Medicines
+- Recent Transactions
+- Top Selling Medicines
+- Total Inventory Value
+
+Dashboard UI requirements:
+- modern cards
+- smooth charts
+- responsive design
+- mobile optimized
+- dark/light mode optional
+- beautiful typography
+- smooth animations
+
+==================================================
+3. Medicine Inventory Management
+==================================================
+
+Medicine fields:
+- Medicine Name
+- Generic Name
+- Brand Name
+- Category
+- Batch Number
+- Barcode
+- Expiry Date
+- Quantity
+- Purchase Price
+- Selling Price
+- VAT
+- Supplier
+- Storage Location
+
+Features:
+- Add medicine
+- Edit medicine
+- Delete medicine
+- Search medicines instantly
+- Filter by category
+- Filter by expiry
+- Stock quantity management
+- Import/export inventory
+- Medicine image optional
+- Fast search optimization
+
+==================================================
+4. Expiry Management System (IMPORTANT)
+==================================================
+
+This is a key feature.
+
+Build:
+- expiry alert system
+- expired medicines section
+- medicines expiring within:
+  - 30 days
+  - 60 days
+  - 90 days
+
+Features:
+- color-coded alerts
+- notification badges
+- dashboard warning cards
+- automatic expiry status updates
+
+Goal:
+Help pharmacies reduce medicine loss due to expiry.
+
+==================================================
+5. Billing / POS System
+==================================================
+
+Build a very fast pharmacy billing interface.
+
+Requirements:
+- instant medicine search
+- add medicines quickly
+- quantity adjustment
+- auto total calculation
+- discount support
+- VAT support
+- printable invoice
+- keyboard shortcut optimized
+- barcode-ready architecture
+- customer information
+- save transactions
+- sales history
+
+Invoice should include:
+- pharmacy name
+- address
+- PAN/VAT info
+- bill number
+- medicine details
+- totals
+
+UI should prioritize SPEED.
+
+==================================================
+6. Sales & Profit Analytics
+==================================================
+
+Analytics section should include:
+- daily sales graph
+- monthly trends
+- best-selling medicines
+- profit margins
+- category-wise sales
+- inventory valuation
+- sales comparison reports
+
+Charts should look modern and professional.
+
+==================================================
+7. Supplier Management
+==================================================
+
+Features:
+- Add suppliers
+- Supplier contact info
+- Purchase history
+- Due payment tracking
+- Supplier reports
+
+==================================================
+8. Purchase Management
+==================================================
+
+Features:
+- record purchases
+- supplier linking
+- automatic stock increase
+- batch tracking
+- invoice upload
+- purchase history
+
+==================================================
+9. Low Stock Alert System
+==================================================
+
+Build automatic alerts when stock goes below threshold.
+
+Features:
+- low stock dashboard widgets
+- configurable thresholds
+- reorder suggestions
+
+==================================================
+10. Customer Credit/Due Management
+==================================================
+
+Features:
+- customer profiles
+- due tracking
+- payment records
+- outstanding balance reports
+
+==================================================
+11. Notifications System
+==================================================
+
+Notifications for:
+- low stock
+- expiry alerts
+- daily sales summary
+- system alerts
+
+Optional future integration:
+- WhatsApp notifications
+- SMS alerts
+
+==================================================
+12. Responsive Modern Design
+==================================================
+
+Design inspiration:
+- Stripe Dashboard
+- Shopify Admin
+- Linear App
+- Modern SaaS dashboards
+
+Requirements:
+- modern sidebar
+- responsive navbar
+- elegant cards
+- smooth spacing
+- modern icons
+- clean typography
+- premium color palette
+- mobile-friendly dashboard
+- tablet optimized
+
+Avoid:
+- clutter
+- outdated ERP design
+- too many colors
+- old-school table-heavy layouts
+
+==================================================
+13. Database Design
+==================================================
+
+Create normalized PostgreSQL database schema.
+
+Important entities:
+- Users
+- Medicines
+- Categories
+- Suppliers
+- Sales
+- SaleItems
+- Purchases
+- PurchaseItems
+- Customers
+- Notifications
+- Roles
+
+Use:
+- proper relationships
+- indexes
+- foreign keys
+- optimized queries
+
+==================================================
+14. Security
+==================================================
+
+Implement:
+- JWT authentication
+- password hashing
+- authorization policies
+- secure APIs
+- audit logs
+- validation
+- SQL injection prevention
+
+==================================================
+15. Architecture Requirements
+==================================================
+
+Follow:
+- Clean Architecture
+- SOLID Principles
+- Repository Pattern
+- Service Layer
+- DTOs
+- API versioning
+- Dependency Injection
+
+Folder structure should be clean and scalable.
+
+==================================================
+16. Future Scalability
+==================================================
+
+Prepare architecture for future features:
+- barcode scanner integration
+- multi-branch pharmacies
+- cloud backups
+- AI sales prediction
+- mobile app
+- WhatsApp reporting
+- online medicine ordering
+
+But DO NOT implement these now.
+
+==================================================
+17. Goal of the System
+==================================================
+
+This software should:
+- reduce operational chaos
+- improve billing speed
+- reduce expiry losses
+- simplify stock management
+- provide modern business insights
+- be easy enough for local Nepal pharmacy staff
+
+The product should feel:
+- modern
+- premium
+- reliable
+- lightweight
+- practical
+- fast
+
+NOT like old government-style software.
+
+Generate:
+- full system architecture
+- database schema
+- API structure
+- Blazor UI structure
+- dashboard layout ideas
+- feature breakdown
+- recommended project folder structure
+- scalable SaaS architecture
+- responsive UI ideas
+- reusable component strategy
+- modern dashboard design suggestions
+- roadmap for MVP to production
