@@ -76,11 +76,9 @@ function shortDate(dateStr: string) {
 }
 
 export default function Analytics() {
-  const { data: summary, isLoading: sl } = useGetDashboardSummary();
-  const { data: chartData, isLoading: cl } = useGetSalesChart();
-  const { data: topMedicines, isLoading: tl } = useGetTopMedicines();
-
-  const isLoading = sl || cl || tl;
+  const { data: summary } = useGetDashboardSummary();
+  const { data: chartData } = useGetSalesChart();
+  const { data: topMedicines } = useGetTopMedicines();
 
   const formattedChart = chartData?.map(p => ({
     ...p,
@@ -91,14 +89,6 @@ export default function Analytics() {
   const totalProfit = chartData?.reduce((s, p) => s + p.profit, 0) ?? 0;
   const avgDaily = chartData?.length ? totalRevenue / chartData.length : 0;
   const peakDay = chartData?.reduce((best, p) => p.sales > best.sales ? p : best, { date: "", sales: 0, profit: 0 });
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground text-sm animate-pulse">Loading analytics...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-10">

@@ -94,15 +94,8 @@ function AlertCard({
 }
 
 export default function Dashboard() {
-  const { data: summary, isLoading } = useGetDashboardSummary();
+  const { data: summary } = useGetDashboardSummary();
   const { data: topMedicines } = useGetTopMedicines();
-
-  if (isLoading)
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground text-sm animate-pulse">Loading dashboard...</div>
-      </div>
-    );
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">

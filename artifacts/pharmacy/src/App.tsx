@@ -16,7 +16,15 @@ import Customers from "@/pages/Customers";
 import Analytics from "@/pages/Analytics";
 import NotFound from "@/pages/not-found";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function ProtectedRoute({ component: Component, ...rest }: any) {
   const { isAuthenticated, isLoading } = useAuth();
