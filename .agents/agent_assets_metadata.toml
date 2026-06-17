@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "r8xDUU9uHO8Y57GtLTbTX"
+uri = "file://Sanjay_Medical_User_Guide.md"
+type = "text"
+title = "Sanjay Medical — User Guide & Feature Documentation"
