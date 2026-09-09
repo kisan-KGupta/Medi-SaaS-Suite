@@ -58,78 +58,38 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Interactive POS Product Preview Card */}
-          <div className="mt-14 max-w-5xl mx-auto rounded-2xl border border-border/80 bg-card p-3 sm:p-5 shadow-2xl shadow-primary/10">
-            <div className="rounded-xl border border-border bg-background/50 overflow-hidden">
-              <div className="bg-muted px-4 py-3 border-b border-border flex items-center justify-between text-xs font-mono text-muted-foreground">
+          {/* 3D Dynamic Interactive Showcase of Live Dashboard Image */}
+          <div className="mt-14 max-w-5xl mx-auto group perspective-1000">
+            <div className="relative rounded-2xl border border-primary/20 bg-card/80 p-3 sm:p-5 shadow-2xl shadow-primary/10 backdrop-blur-xl transition-all duration-700 ease-out transform-gpu group-hover:[transform:rotateX(3deg)_rotateY(-3deg)_scale(1.02)] group-hover:shadow-primary/25 group-hover:border-primary/40">
+              
+              {/* Top Browser Bar */}
+              <div className="rounded-xl border border-border/80 bg-muted/90 px-4 py-3 border-b border-border flex items-center justify-between text-xs font-mono text-muted-foreground backdrop-blur-md">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-rose-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                  <span className="ml-2 font-semibold text-foreground">Medi-SaaS POS — Billing Dashboard</span>
+                  <div className="w-3 h-3 rounded-full bg-rose-500/90 shadow-sm" />
+                  <div className="w-3 h-3 rounded-full bg-amber-500/90 shadow-sm" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-500/90 shadow-sm" />
+                  <span className="ml-2 font-semibold text-foreground flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Sanjay Medical Pharmacy — Real-Time Cloud Workspace
+                  </span>
                 </div>
-                <div className="hidden sm:flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-semibold text-[10px]">POS ACTIVE</span>
+                <div className="hidden sm:flex items-center gap-3">
+                  <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold text-[11px] border border-primary/20">
+                    LIVE SaaS DASHBOARD
+                  </span>
                 </div>
               </div>
 
-              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 space-y-4">
-                  <div className="p-4 rounded-lg bg-card border border-border space-y-3">
-                    <div className="flex justify-between items-center text-xs font-semibold">
-                      <span className="text-muted-foreground">Medicine Search (Keyboard First)</span>
-                      <span className="text-primary font-mono">Press [ENTER] to add</span>
-                    </div>
-                    <div className="p-3 rounded-md bg-muted/60 border border-input flex items-center justify-between text-sm font-medium">
-                      <span>Paracetamol 500mg (Batch #PAR-2026-09)</span>
-                      <span className="text-emerald-600 font-bold">$12.50</span>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-border overflow-hidden text-xs">
-                    <table className="w-full text-left">
-                      <thead className="bg-muted/50 font-semibold text-muted-foreground border-b border-border">
-                        <tr>
-                          <th className="p-2.5">Item</th>
-                          <th className="p-2.5">Qty</th>
-                          <th className="p-2.5">Price</th>
-                          <th className="p-2.5 text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/50 font-medium">
-                        <tr>
-                          <td className="p-2.5 font-semibold">Amoxicillin 250mg Capsule</td>
-                          <td className="p-2.5">2</td>
-                          <td className="p-2.5">$18.00</td>
-                          <td className="p-2.5 text-right font-bold">$36.00</td>
-                        </tr>
-                        <tr>
-                          <td className="p-2.5 font-semibold">Cetirizine 10mg Tablets</td>
-                          <td className="p-2.5">1</td>
-                          <td className="p-2.5">$8.50</td>
-                          <td className="p-2.5 text-right font-bold">$8.50</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 space-y-3">
-                    <div className="text-xs font-semibold text-muted-foreground">Order Summary</div>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between"><span>Subtotal</span><span className="font-semibold">$44.50</span></div>
-                      <div className="flex justify-between"><span>VAT (13%)</span><span className="font-semibold">$5.78</span></div>
-                      <div className="flex justify-between text-base font-bold text-primary pt-2 border-t border-primary/20">
-                        <span>Total Due</span>
-                        <span>$50.28</span>
-                      </div>
-                    </div>
-                    <Button className="w-full font-bold shadow-md shadow-primary/20">
-                      Complete Checkout [Enter]
-                    </Button>
-                  </div>
-                </div>
+              {/* 3D Showcase Image Container */}
+              <div className="relative rounded-xl overflow-hidden border border-border/60 bg-slate-950 mt-2 shadow-inner group/img">
+                <img
+                  src="/dashboard-preview.png"
+                  alt="Sanjay Medical Pharmacy Dashboard Preview"
+                  className="w-full h-auto object-cover rounded-xl transition-all duration-700 ease-out group-hover/img:scale-[1.01]"
+                />
+                
+                {/* 3D Glass Light Reflection Sheen Effect */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-primary/10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
               </div>
             </div>
           </div>
