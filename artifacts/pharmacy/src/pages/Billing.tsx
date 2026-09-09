@@ -298,8 +298,13 @@ export default function Billing() {
       )}
 
       <div className="h-[calc(100vh-8rem)] flex flex-col lg:flex-row gap-4 md:gap-6">
-        {/* Medicine search — left column */}
-        <div className="flex flex-col gap-4 flex-1 min-h-0">
+        {/* Current bill — large left workspace */}
+        <div className="hidden lg:flex flex-1 min-w-0 flex-col border rounded-md bg-card shadow-sm">
+          {CartPanel}
+        </div>
+
+        {/* Medicine search — right column */}
+        <div className="flex flex-col gap-4 min-h-0 lg:w-[400px] xl:w-[460px] shrink-0">
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
@@ -379,11 +384,6 @@ export default function Billing() {
               </TableBody>
             </Table>
           </div>
-        </div>
-
-        {/* Cart panel — right column, desktop only */}
-        <div className="hidden lg:flex w-[380px] xl:w-[420px] shrink-0 flex-col border rounded-md bg-card shadow-sm">
-          {CartPanel}
         </div>
       </div>
     </>
