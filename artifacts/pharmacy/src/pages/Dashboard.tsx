@@ -1,7 +1,9 @@
+import { useState } from "react";
 import {
   useGetDashboardSummary,
   useGetTopMedicines,
 } from "@workspace/api-client-react";
+import AddMedicineDialog from "@/components/AddMedicineDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
 import {
@@ -12,6 +14,9 @@ import {
   PackageMinus,
   ShoppingBag,
   ArrowRight,
+  ArrowUpRight,
+  Plus,
+  ShoppingCart,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -94,11 +99,17 @@ function AlertCard({
 }
 
 export default function Dashboard() {
+  const [showAddMedicine, setShowAddMedicine] = useState(false);
   const { data: summary } = useGetDashboardSummary();
   const { data: topMedicines } = useGetTopMedicines();
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      <AddMedicineDialog
+        open={showAddMedicine}
+        onClose={() => setShowAddMedicine(false)}
+      />
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard
@@ -134,6 +145,58 @@ export default function Dashboard() {
           iconColor="text-violet-600"
           sub="NPR at purchase price"
         />
+      </div>
+
+      {/* Quick actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+        <Link href="/billing" className="group">
+          <Card className="h-full border-0 bg-primary text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
+            <CardContent className="flex items-center justify-between gap-4 p-5">
+              <div className="flex items-center gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <ShoppingCart className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-primary-foreground/70">
+                    Quick action
+                  </p>
+                  <p className="mt-1 text-lg font-bold">Open Billing / POS</p>
+                  <p className="mt-0.5 text-sm text-primary-foreground/75">
+                    Start a new customer bill
+                  </p>
+                </div>
+              </div>
+              <ArrowUpRight className="h-5 w-5 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setShowAddMedicine(true)}
+          className="group text-left"
+        >
+          <Card className="h-full border border-blue-100 bg-blue-50/70 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg">
+            <CardContent className="flex items-center justify-between gap-4 p-5">
+              <div className="flex items-center gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                  <Plus className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-700/70">
+                    Quick action
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-blue-950">Add Medicine</p>
+                  <p className="mt-0.5 text-sm text-blue-900/65">
+                    Add new stock to inventory
+                  </p>
+                </div>
+              </div>
+              <ArrowUpRight className="h-5 w-5 shrink-0 text-blue-700 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </CardContent>
+          </Card>
+        </button>
+
       </div>
 
       {/* Alert row */}
