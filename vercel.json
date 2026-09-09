@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm --filter '@workspace/pharmacy' run build",
-  "outputDirectory": "artifacts/pharmacy/dist/public",
+  "outputDirectory": "artifacts/pharmacy/dist",
   "rewrites": [
     {
       "source": "/api/(.*)",
