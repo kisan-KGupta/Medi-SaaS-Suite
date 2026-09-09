@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/format";
-import { Search, Plus, Trash2, Printer, ShoppingCart } from "lucide-react";
+import { Search, Plus, Trash2, Printer, ListPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import Invoice from "@/components/Invoice";
@@ -32,7 +32,7 @@ export default function Billing() {
   const [isCredit, setIsCredit] = useState(false);
   const [lastSale, setLastSale] = useState<any>(null);
   const [showInvoice, setShowInvoice] = useState(false);
-  const [showCart, setShowCart] = useState(false);
+  const [showMedicineList, setShowMedicineList] = useState(false);
 
   const { data: medicines } = useListMedicines({ search: searchTerm });
   const createSale = useCreateSale();
@@ -110,7 +110,7 @@ export default function Billing() {
           queryClient.invalidateQueries({ queryKey: getListSalesQueryKey() });
           setLastSale(sale);
           setShowInvoice(true);
-          setShowCart(false);
+           setShowMedicineList(false);
           setCart([]);
           setCustomerName("");
           setCustomerPhone("");
@@ -131,19 +131,31 @@ export default function Billing() {
 
   const CartPanel = (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b font-bold text-lg flex items-center justify-between">
-        <span>Current Bill</span>
-        {lastSale && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 text-xs"
-            onClick={() => setShowInvoice(true)}
-          >
-            <Printer className="w-3.5 h-3.5" />
-            Last Invoice
-          </Button>
-        )}
+       <div className="p-4 border-b font-bold text-lg flex items-center justify-between">
+         <span>Current Bill</span>
+         <div className="flex items-center gap-2">
+           <Button
+             size="icon"
+             variant="outline"
+             className="h-9 w-9 lg:hidden"
+             onClick={() => setShowMedicineList(true)}
+             aria-label="Search and add medicine"
+             title="Search and add medicine"
+           >
+             <ListPlus className="w-4 h-4" />
+           </Button>
+           {lastSale && (
+             <Button
+               size="sm"
+               variant="outline"
+               className="gap-1.5 text-xs"
+               onClick={() => setShowInvoice(true)}
+             >
+               <Printer className="w-3.5 h-3.5" />
+               <span className="hidden sm:inline">Last Invoice</span>
+             </Button>
+           )}
+         </div>
       </div>
 
       <div className="flex-1 overflow-auto p-4">
@@ -269,121 +281,121 @@ export default function Billing() {
     </div>
   );
 
+  const MedicinePanel = (
+    <div className="flex flex-col gap-4 min-h-0 h-full">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search medicine... (Enter to add first)"
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && medicines && medicines.length > 0) {
+                addToCart(medicines[0]);
+                setSearchTerm("");
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="border rounded-md flex-1 min-h-0 overflow-auto bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Medicine</TableHead>
+              <TableHead className="hidden sm:table-cell">Stock</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead className="w-10"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {medicines?.map((med) => (
+              <TableRow
+                key={med.id}
+                className="cursor-pointer hover:bg-muted/40"
+                onClick={() => addToCart(med)}
+              >
+                <TableCell>
+                  <div className="font-medium text-sm">{med.name}</div>
+                  <div className="text-xs text-muted-foreground">{med.genericName}</div>
+                  <div className="text-xs text-muted-foreground sm:hidden">
+                    Stock:{" "}
+                    <span className={med.quantity <= med.reorderLevel ? "text-amber-600 font-bold" : ""}>
+                      {med.quantity}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  <span className={med.quantity <= med.reorderLevel ? "text-amber-600 font-bold" : ""}>
+                    {med.quantity}
+                  </span>
+                </TableCell>
+                <TableCell className="text-sm">{formatCurrency(med.sellingPrice)}</TableCell>
+                <TableCell>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToCart(med);
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {showInvoice && lastSale && (
         <Invoice data={lastSale} onClose={() => setShowInvoice(false)} />
       )}
 
-      {/* Mobile cart sheet overlay */}
-      {showCart && (
+      {/* Mobile medicine search sheet */}
+      {showMedicineList && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
             className="absolute inset-0 bg-black/50"
-            onClick={() => setShowCart(false)}
+            onClick={() => setShowMedicineList(false)}
           />
-          <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl max-h-[90vh] flex flex-col shadow-2xl">
+          <div className="absolute inset-x-0 bottom-0 flex h-[92vh] flex-col rounded-t-2xl bg-card shadow-2xl">
             <div className="flex items-center justify-between px-4 pt-3 pb-1">
-              <span className="text-xs text-muted-foreground font-medium">CART</span>
+              <span className="text-sm font-semibold">Search & Add Medicine</span>
               <button
                 className="text-muted-foreground hover:text-foreground p-1"
-                onClick={() => setShowCart(false)}
+                onClick={() => setShowMedicineList(false)}
+                aria-label="Close medicine list"
               >
                 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-auto">{CartPanel}</div>
+            <div className="flex-1 min-h-0 overflow-hidden p-4">{MedicinePanel}</div>
           </div>
         </div>
       )}
 
       <div className="h-[calc(100vh-8rem)] flex flex-col lg:flex-row gap-4 md:gap-6">
         {/* Current bill — large left workspace */}
+        <div className="flex lg:hidden flex-1 min-h-0 flex-col border rounded-md bg-card shadow-sm">
+          {CartPanel}
+        </div>
         <div className="hidden lg:flex flex-1 min-w-0 flex-col border rounded-md bg-card shadow-sm">
           {CartPanel}
         </div>
 
         {/* Medicine search — right column */}
-        <div className="flex flex-col gap-4 min-h-0 lg:w-[400px] xl:w-[460px] shrink-0">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search medicine... (Enter to add first)"
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && medicines && medicines.length > 0) {
-                    addToCart(medicines[0]);
-                    setSearchTerm("");
-                  }
-                }}
-              />
-            </div>
-            {/* Mobile cart button */}
-            <Button
-              variant="outline"
-              className="lg:hidden relative shrink-0"
-              onClick={() => setShowCart(true)}
-            >
-              <ShoppingCart className="w-4 h-4" />
-              {cart.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold">
-                  {cart.length}
-                </span>
-              )}
-            </Button>
-          </div>
-
-          <div className="border rounded-md flex-1 overflow-auto bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Medicine</TableHead>
-                  <TableHead className="hidden sm:table-cell">Stock</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead className="w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {medicines?.map((med) => (
-                  <TableRow
-                    key={med.id}
-                    className="cursor-pointer hover:bg-muted/40"
-                    onClick={() => addToCart(med)}
-                  >
-                    <TableCell>
-                      <div className="font-medium text-sm">{med.name}</div>
-                      <div className="text-xs text-muted-foreground">{med.genericName}</div>
-                      <div className="text-xs text-muted-foreground sm:hidden">
-                        Stock: <span className={med.quantity <= med.reorderLevel ? "text-amber-600 font-bold" : ""}>{med.quantity}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <span className={med.quantity <= med.reorderLevel ? "text-amber-600 font-bold" : ""}>
-                        {med.quantity}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-sm">{formatCurrency(med.sellingPrice)}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToCart(med);
-                        }}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+        <div className="hidden lg:flex flex-col gap-4 min-h-0 lg:w-[400px] xl:w-[460px] shrink-0">
+          {MedicinePanel}
         </div>
       </div>
     </>
