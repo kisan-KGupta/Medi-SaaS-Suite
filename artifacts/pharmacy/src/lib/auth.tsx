@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
+import { useGetMe, getGetMeQueryKey, setAuthTokenGetter } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+
+// Register bearer token getter for customFetch
+setAuthTokenGetter(() => localStorage.getItem("pharmacy_token"));
 
 interface AuthContextType {
   isAuthenticated: boolean;

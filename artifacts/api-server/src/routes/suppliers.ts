@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, suppliersTable, purchasesTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
+import { db, suppliersTable } from "@workspace/db";
 import {
   CreateSupplierBody,
   GetSupplierParams,
@@ -9,60 +9,99 @@ import {
   DeleteSupplierParams,
 } from "@workspace/api-zod";
 import { requireAuth } from "./auth";
+import { requirePermission } from "../middlewares/rbac";
+import { subscriptionCheckMiddleware } from "../middlewares/subscription";
 
 const router: IRouter = Router();
 
-async function supplierWithPurchases(row: typeof suppliersTable.$inferSelect) {
-  const result = await db
-    .select({ total: sql<string>`coalesce(sum(${purchasesTable.totalAmount}), 0)` })
-    .from(purchasesTable)
-    .where(eq(purchasesTable.supplierId, row.id));
+function formatSupplier(row: typeof suppliersTable.$inferSelect) {
   return {
     id: row.id,
+    pharmacyId: row.pharmacyId,
     name: row.name,
     contactPerson: row.contactPerson,
     phone: row.phone,
     email: row.email,
     address: row.address,
-    totalPurchases: parseFloat(result[0]?.total ?? "0"),
+    createdAt: row.createdAt.toISOString(),
   };
 }
 
-router.get("/suppliers", requireAuth, async (_req, res): Promise<void> => {
-  const rows = await db.select().from(suppliersTable).orderBy(suppliersTable.name);
-  const results = await Promise.all(rows.map(supplierWithPurchases));
-  res.json(results);
+router.get("/suppliers", requireAuth, subscriptionCheckMiddleware, requirePermission("supplier.view"), async (req: any, res): Promise<void> => {
+  const pharmacyId = req.user.pharmacyId;
+  const conditions: any[] = [];
+
+  if (!req.user.isSuperAdmin && pharmacyId) {
+    conditions.push(eq(suppliersTable.pharmacyId, pharmacyId));
+  }
+
+  const rows = await db.select().from(suppliersTable)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(suppliersTable.name);
+  res.json(rows.map(formatSupplier));
 });
 
-router.post("/suppliers", requireAuth, async (req, res): Promise<void> => {
+router.post("/suppliers", requireAuth, subscriptionCheckMiddleware, requirePermission("supplier.create"), async (req: any, res): Promise<void> => {
   const parsed = CreateSupplierBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
-  const [row] = await db.insert(suppliersTable).values(parsed.data).returning();
-  res.status(201).json(await supplierWithPurchases(row));
+
+  const pharmacyId = req.user.pharmacyId;
+  if (!pharmacyId && !req.user.isSuperAdmin) {
+    res.status(403).json({ error: "Pharmacy tenant missing" });
+    return;
+  }
+
+  const [row] = await db.insert(suppliersTable).values({
+    ...parsed.data,
+    pharmacyId: pharmacyId ?? (req.body.pharmacyId || 1)
+  }).returning();
+
+  res.status(201).json(formatSupplier(row));
 });
 
-router.get("/suppliers/:id", requireAuth, async (req, res): Promise<void> => {
+router.get("/suppliers/:id", requireAuth, subscriptionCheckMiddleware, requirePermission("supplier.view"), async (req: any, res): Promise<void> => {
   const params = GetSupplierParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const [row] = await db.select().from(suppliersTable).where(eq(suppliersTable.id, params.data.id));
+
+  const pharmacyId = req.user.pharmacyId;
+  const conditions = [eq(suppliersTable.id, params.data.id)];
+  if (!req.user.isSuperAdmin && pharmacyId) {
+    conditions.push(eq(suppliersTable.pharmacyId, pharmacyId));
+  }
+
+  const [row] = await db.select().from(suppliersTable).where(and(...conditions));
   if (!row) { res.status(404).json({ error: "Supplier not found" }); return; }
-  res.json(await supplierWithPurchases(row));
+  res.json(formatSupplier(row));
 });
 
-router.patch("/suppliers/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/suppliers/:id", requireAuth, subscriptionCheckMiddleware, requirePermission("supplier.update"), async (req: any, res): Promise<void> => {
   const params = UpdateSupplierParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const parsed = UpdateSupplierBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
-  const [row] = await db.update(suppliersTable).set(parsed.data).where(eq(suppliersTable.id, params.data.id)).returning();
+
+  const pharmacyId = req.user.pharmacyId;
+  const conditions = [eq(suppliersTable.id, params.data.id)];
+  if (!req.user.isSuperAdmin && pharmacyId) {
+    conditions.push(eq(suppliersTable.pharmacyId, pharmacyId));
+  }
+
+  const [row] = await db.update(suppliersTable).set(parsed.data).where(and(...conditions)).returning();
   if (!row) { res.status(404).json({ error: "Supplier not found" }); return; }
-  res.json(await supplierWithPurchases(row));
+  res.json(formatSupplier(row));
 });
 
-router.delete("/suppliers/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/suppliers/:id", requireAuth, subscriptionCheckMiddleware, requirePermission("supplier.delete"), async (req: any, res): Promise<void> => {
   const params = DeleteSupplierParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  await db.delete(suppliersTable).where(eq(suppliersTable.id, params.data.id));
+
+  const pharmacyId = req.user.pharmacyId;
+  const conditions = [eq(suppliersTable.id, params.data.id)];
+  if (!req.user.isSuperAdmin && pharmacyId) {
+    conditions.push(eq(suppliersTable.pharmacyId, pharmacyId));
+  }
+
+  await db.delete(suppliersTable).where(and(...conditions));
   res.sendStatus(204);
 });
 

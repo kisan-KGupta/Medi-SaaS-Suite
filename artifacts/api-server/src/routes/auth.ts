@@ -1,13 +1,12 @@
 import { Router, type IRouter } from "express";
 import { randomBytes, scryptSync, timingSafeEqual, createHmac } from "crypto";
-import { eq } from "drizzle-orm";
-import { db, usersTable } from "@workspace/db";
+import { eq, inArray } from "drizzle-orm";
+import { db, usersTable, rolePermissionsTable, permissionsTable, pharmaciesTable } from "@workspace/db";
 import { LoginBody } from "@workspace/api-zod";
-import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-const SESSION_SECRET = process.env.SESSION_SECRET ?? "sanjay-medical-secret-key";
+const SESSION_SECRET = process.env.SESSION_SECRET ?? "medisaas-secret-session-key";
 
 // In-memory token store: token -> userId
 const tokenStore = new Map<string, number>();
@@ -32,9 +31,36 @@ export function hashPassword(password: string): string {
 
 export function verifyPassword(password: string, stored: string): boolean {
   const [salt, hash] = stored.split(":");
+  if (!salt || !hash) return false;
   const hashBuffer = Buffer.from(hash, "hex");
   const suppliedHash = scryptSync(password, salt, 64);
   return timingSafeEqual(hashBuffer, suppliedHash);
+}
+
+// Get permissions for a role
+async function getRolePermissions(roleId: number | null, isSuperAdmin: boolean): Promise<string[]> {
+  if (isSuperAdmin) {
+    // Super Admin has all permissions
+    const allPerms = await db.select({ key: permissionsTable.key }).from(permissionsTable);
+    return allPerms.map((p: any) => p.key);
+  }
+
+  if (!roleId) return [];
+
+  const rels = await db
+    .select({ permId: rolePermissionsTable.permissionId })
+    .from(rolePermissionsTable)
+    .where(eq(rolePermissionsTable.roleId, roleId));
+
+  if (rels.length === 0) return [];
+
+  const permIds = rels.map((r: any) => r.permId);
+  const perms = await db
+    .select({ key: permissionsTable.key })
+    .from(permissionsTable)
+    .where(inArray(permissionsTable.id, permIds));
+
+  return perms.map((p: any) => p.key);
 }
 
 // Auth middleware
@@ -59,7 +85,13 @@ export async function requireAuth(req: any, res: any, next: any): Promise<void> 
     return;
   }
 
+  if (user.status === "SUSPENDED" || user.status === "INACTIVE") {
+    res.status(403).json({ error: "User account is suspended" });
+    return;
+  }
+
   req.user = user;
+  req.pharmacyId = user.pharmacyId;
   next();
 }
 
@@ -84,18 +116,61 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
+  if (user.status === "SUSPENDED") {
+    res.status(403).json({ error: "User account is suspended" });
+    return;
+  }
+
+  // Load pharmacy info if not superadmin
+  let pharmacyName = null;
+  if (user.pharmacyId) {
+    const [pharmacy] = await db.select().from(pharmaciesTable).where(eq(pharmaciesTable.id, user.pharmacyId));
+    pharmacyName = pharmacy?.name ?? null;
+  }
+
+  const permissions = await getRolePermissions(user.roleId, user.isSuperAdmin);
   const token = generateToken(user.id);
-  req.log.info({ userId: user.id }, "User logged in");
 
   res.json({
-    user: { id: user.id, username: user.username, name: user.name, role: user.role },
+    user: {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: user.role,
+      pharmacyId: user.pharmacyId,
+      pharmacyName,
+      roleId: user.roleId,
+      isSuperAdmin: user.isSuperAdmin,
+      status: user.status,
+      permissions,
+    },
     token,
   });
 });
 
 router.get("/auth/me", requireAuth, async (req: any, res): Promise<void> => {
   const user = req.user;
-  res.json({ id: user.id, username: user.username, name: user.name, role: user.role });
+
+  let pharmacyName = null;
+  if (user.pharmacyId) {
+    const [pharmacy] = await db.select().from(pharmaciesTable).where(eq(pharmaciesTable.id, user.pharmacyId));
+    pharmacyName = pharmacy?.name ?? null;
+  }
+
+  const permissions = await getRolePermissions(user.roleId, user.isSuperAdmin);
+
+  res.json({
+    id: user.id,
+    username: user.username,
+    name: user.name,
+    role: user.role,
+    pharmacyId: user.pharmacyId,
+    pharmacyName,
+    roleId: user.roleId,
+    isSuperAdmin: user.isSuperAdmin,
+    status: user.status,
+    permissions,
+  });
 });
 
 router.post("/auth/logout", requireAuth, async (req: any, res): Promise<void> => {

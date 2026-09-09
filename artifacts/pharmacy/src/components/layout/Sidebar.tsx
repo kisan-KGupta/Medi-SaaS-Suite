@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useGetDashboardSummary } from "@workspace/api-client-react";
+import { useGetMe } from "@workspace/api-client-react";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -11,6 +12,11 @@ import {
   UsersRound,
   BarChart3,
   Stethoscope,
+  Building,
+  Shield,
+  UserPlus,
+  Crown,
+  CreditCard,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,48 +26,71 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const navGroups = [
-  {
-    label: "Main",
-    items: [
-      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { name: "Billing / POS", href: "/billing", icon: ShoppingCart },
-    ],
-  },
-  {
-    label: "Inventory",
-    items: [
-      { name: "Medicines", href: "/inventory", icon: Package },
-      { name: "Expiry Alerts", href: "/expiry", icon: AlertTriangle, alertKey: "expiring" as const },
-    ],
-  },
-  {
-    label: "Transactions",
-    items: [
-      { name: "Sales History", href: "/sales", icon: History },
-      { name: "Purchases", href: "/purchases", icon: Truck },
-    ],
-  },
-  {
-    label: "People",
-    items: [
-      { name: "Suppliers", href: "/suppliers", icon: Users },
-      { name: "Customers", href: "/customers", icon: UsersRound },
-    ],
-  },
-  {
-    label: "Reports",
-    items: [
-      { name: "Analytics", href: "/analytics", icon: BarChart3 },
-    ],
-  },
-];
-
 export function Sidebar({ open, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { data: summary } = useGetDashboardSummary();
+  const { data: user } = useGetMe();
 
+  const isSuperAdmin = Boolean(user && (user as any).isSuperAdmin);
+  const pharmacyName = (user as any)?.pharmacyName || "Sanjay Medical";
   const alertCount = (summary?.expiringCount ?? 0) + (summary?.expiredCount ?? 0);
+
+  const navGroups = [
+    {
+      label: "Main",
+      items: [
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "Billing / POS", href: "/billing", icon: ShoppingCart },
+      ],
+    },
+    {
+      label: "Inventory",
+      items: [
+        { name: "Medicines", href: "/inventory", icon: Package },
+        { name: "Expiry Alerts", href: "/expiry", icon: AlertTriangle, alertKey: "expiring" as const },
+      ],
+    },
+    {
+      label: "Transactions",
+      items: [
+        { name: "Sales History", href: "/sales", icon: History },
+        { name: "Purchases", href: "/purchases", icon: Truck },
+      ],
+    },
+    {
+      label: "People",
+      items: [
+        { name: "Suppliers", href: "/suppliers", icon: Users },
+        { name: "Customers", href: "/customers", icon: UsersRound },
+      ],
+    },
+    {
+      label: "Reports",
+      items: [
+        { name: "Analytics", href: "/analytics", icon: BarChart3 },
+      ],
+    },
+    {
+      label: "Settings",
+      items: [
+        { name: "Pharmacy Store", href: "/settings/pharmacy", icon: Building },
+        { name: "Staff & Users", href: "/settings/staff", icon: UserPlus },
+        { name: "Roles & Permissions", href: "/settings/roles", icon: Shield },
+      ],
+    },
+  ];
+
+  if (isSuperAdmin) {
+    navGroups.unshift({
+      label: "SaaS Super Admin",
+      items: [
+        { name: "Platform Overview", href: "/admin/dashboard", icon: Crown },
+        { name: "Pharmacies", href: "/admin/pharmacies", icon: Building },
+        { name: "Plans", href: "/admin/plans", icon: CreditCard },
+        { name: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
+      ],
+    });
+  }
 
   return (
     <>
@@ -88,9 +117,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20">
               <Stethoscope className="h-4 w-4 text-primary" />
             </div>
-            <div>
-              <div className="text-sm font-bold tracking-tight text-white leading-none">Sanjay Medical</div>
-              <div className="text-[10px] text-[hsl(var(--sidebar-foreground))]/50 leading-none mt-0.5">Pharmacy System</div>
+            <div className="overflow-hidden">
+              <div className="text-sm font-bold tracking-tight text-white leading-none truncate">
+                {pharmacyName}
+              </div>
+              <div className="text-[10px] text-[hsl(var(--sidebar-foreground))]/50 leading-none mt-0.5">
+                {isSuperAdmin ? "Super Admin Portal" : "Medi-SaaS Workspace"}
+              </div>
             </div>
           </div>
           <button
@@ -110,9 +143,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               </div>
               <div className="space-y-0.5">
                 {group.items.map((item) => {
-                  const isActive =
-                    location === item.href ||
-                    (location === "/" && item.href === "/dashboard");
+                  const isActive = location === item.href;
                   const badge = item.alertKey === "expiring" && alertCount > 0 ? alertCount : null;
                   return (
                     <Link key={item.name} href={item.href} onClick={onClose}>
@@ -148,11 +179,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        {/* Bottom build info */}
-        <div className="px-5 py-4 border-t border-[hsl(var(--sidebar-border))]">
-          <div className="text-[10px] text-[hsl(var(--sidebar-foreground))]/30 leading-relaxed">
-            Horizon Chowk, Butwal<br />Rupandehi, Nepal
+        {/* Bottom footer */}
+        <div className="px-5 py-4 border-t border-[hsl(var(--sidebar-border))] flex items-center justify-between">
+          <div className="text-[10px] text-[hsl(var(--sidebar-foreground))]/40">
+            Medi-SaaS Multi-Tenant Cloud
           </div>
+          <Link href="/">
+            <span className="text-[10px] font-semibold text-primary hover:underline cursor-pointer">
+              Public Site →
+            </span>
+          </Link>
         </div>
       </div>
     </>

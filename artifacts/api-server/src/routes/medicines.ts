@@ -10,6 +10,8 @@ import {
   DeleteMedicineParams,
 } from "@workspace/api-zod";
 import { requireAuth } from "./auth";
+import { requirePermission } from "../middlewares/rbac";
+import { subscriptionCheckMiddleware } from "../middlewares/subscription";
 
 const router: IRouter = Router();
 
@@ -37,6 +39,7 @@ async function enrichMedicine(row: typeof medicinesTable.$inferSelect) {
 
   return {
     id: row.id,
+    pharmacyId: row.pharmacyId,
     name: row.name,
     genericName: row.genericName,
     brandName: row.brandName,
@@ -58,11 +61,18 @@ async function enrichMedicine(row: typeof medicinesTable.$inferSelect) {
   };
 }
 
-router.get("/medicines", requireAuth, async (req, res): Promise<void> => {
+router.get("/medicines", requireAuth, subscriptionCheckMiddleware, requirePermission("medicine.view"), async (req: any, res): Promise<void> => {
   const q = ListMedicinesQueryParams.safeParse(req.query);
   if (!q.success) { res.status(400).json({ error: q.error.message }); return; }
 
+  const pharmacyId = req.user.pharmacyId;
   const conditions: any[] = [];
+
+  // Strictly enforce tenant scope if not superadmin
+  if (!req.user.isSuperAdmin && pharmacyId) {
+    conditions.push(eq(medicinesTable.pharmacyId, pharmacyId));
+  }
+
   if (q.data.search) {
     conditions.push(ilike(medicinesTable.name, `%${q.data.search}%`));
   }
@@ -81,54 +91,90 @@ router.get("/medicines", requireAuth, async (req, res): Promise<void> => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() + q.data.expiryDays);
     const cutoffStr = cutoff.toISOString().split("T")[0];
-    rows = rows.filter(r => r.expiryDate <= cutoffStr);
+    rows = rows.filter((r: any) => r.expiryDate <= cutoffStr);
   }
 
   const results = await Promise.all(rows.map(enrichMedicine));
   res.json(results);
 });
 
-router.post("/medicines", requireAuth, async (req, res): Promise<void> => {
+router.post("/medicines", requireAuth, subscriptionCheckMiddleware, requirePermission("medicine.create"), async (req: any, res): Promise<void> => {
   const parsed = CreateMedicineBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const pharmacyId = req.user.pharmacyId;
+  if (!pharmacyId && !req.user.isSuperAdmin) {
+    res.status(403).json({ error: "Pharmacy tenant missing" });
+    return;
+  }
+
   const data = {
     ...parsed.data,
+    pharmacyId: pharmacyId ?? (req.body.pharmacyId || 1),
     purchasePrice: String(parsed.data.purchasePrice),
     sellingPrice: String(parsed.data.sellingPrice),
     vatPercent: String(parsed.data.vatPercent ?? 0),
   };
+
   const [row] = await db.insert(medicinesTable).values(data as any).returning();
   res.status(201).json(await enrichMedicine(row));
 });
 
-router.get("/medicines/:id", requireAuth, async (req, res): Promise<void> => {
+router.get("/medicines/:id", requireAuth, subscriptionCheckMiddleware, requirePermission("medicine.view"), async (req: any, res): Promise<void> => {
   const params = GetMedicineParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const [row] = await db.select().from(medicinesTable).where(eq(medicinesTable.id, params.data.id));
+
+  const pharmacyId = req.user.pharmacyId;
+  const conditions = [eq(medicinesTable.id, params.data.id)];
+  if (!req.user.isSuperAdmin && pharmacyId) {
+    conditions.push(eq(medicinesTable.pharmacyId, pharmacyId));
+  }
+
+  const [row] = await db.select().from(medicinesTable).where(and(...conditions));
   if (!row) { res.status(404).json({ error: "Medicine not found" }); return; }
   res.json(await enrichMedicine(row));
 });
 
-router.patch("/medicines/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/medicines/:id", requireAuth, subscriptionCheckMiddleware, requirePermission("medicine.update"), async (req: any, res): Promise<void> => {
   const params = UpdateMedicineParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const parsed = UpdateMedicineBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
+  const pharmacyId = req.user.pharmacyId;
+  const conditions = [eq(medicinesTable.id, params.data.id)];
+  if (!req.user.isSuperAdmin && pharmacyId) {
+    conditions.push(eq(medicinesTable.pharmacyId, pharmacyId));
+  }
+
   const updateData: any = { ...parsed.data };
+  delete updateData.pharmacyId; // Prevent changing tenant ownership
   if (updateData.purchasePrice !== undefined) updateData.purchasePrice = String(updateData.purchasePrice);
   if (updateData.sellingPrice !== undefined) updateData.sellingPrice = String(updateData.sellingPrice);
   if (updateData.vatPercent !== undefined) updateData.vatPercent = String(updateData.vatPercent);
 
-  const [row] = await db.update(medicinesTable).set(updateData).where(eq(medicinesTable.id, params.data.id)).returning();
+  const [row] = await db.update(medicinesTable).set(updateData).where(and(...conditions)).returning();
   if (!row) { res.status(404).json({ error: "Medicine not found" }); return; }
   res.json(await enrichMedicine(row));
 });
 
-router.delete("/medicines/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/medicines/:id", requireAuth, subscriptionCheckMiddleware, requirePermission("medicine.delete"), async (req: any, res): Promise<void> => {
   const params = DeleteMedicineParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  await db.delete(medicinesTable).where(eq(medicinesTable.id, params.data.id));
+
+  const pharmacyId = req.user.pharmacyId;
+  const conditions = [eq(medicinesTable.id, params.data.id)];
+  if (!req.user.isSuperAdmin && pharmacyId) {
+    conditions.push(eq(medicinesTable.pharmacyId, pharmacyId));
+  }
+
+  const [existing] = await db.select().from(medicinesTable).where(and(...conditions));
+  if (!existing) {
+    res.status(404).json({ error: "Medicine not found" });
+    return;
+  }
+
+  await db.delete(medicinesTable).where(and(...conditions));
   res.sendStatus(204);
 });
 

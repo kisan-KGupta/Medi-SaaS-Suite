@@ -8,6 +8,9 @@ import purchasesRouter from "./purchases";
 import salesRouter from "./sales";
 import customersRouter from "./customers";
 import dashboardRouter from "./dashboard";
+import rolesRouter from "./roles";
+import saasRouter from "./saas";
+import onboardingRouter from "./onboarding";
 
 const router: IRouter = Router();
 
@@ -20,5 +23,8 @@ router.use(purchasesRouter);
 router.use(salesRouter);
 router.use(customersRouter);
 router.use(dashboardRouter);
+router.use(rolesRouter);
+router.use(saasRouter);
+router.use(onboardingRouter);
 
 export default router;

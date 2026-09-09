@@ -1,17 +1,25 @@
-import { pgTable, text, serial, timestamp, integer, numeric, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, numeric, date, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { suppliersTable } from "./suppliers";
 import { medicinesTable } from "./medicines";
+import { pharmaciesTable } from "./pharmacies";
 
-export const purchasesTable = pgTable("purchases", {
-  id: serial("id").primaryKey(),
-  supplierId: integer("supplier_id").notNull().references(() => suppliersTable.id, { onDelete: "restrict" }),
-  invoiceNumber: text("invoice_number").notNull(),
-  purchaseDate: date("purchase_date").notNull(),
-  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const purchasesTable = pgTable(
+  "purchases",
+  {
+    id: serial("id").primaryKey(),
+    pharmacyId: integer("pharmacy_id").notNull().references(() => pharmaciesTable.id, { onDelete: "cascade" }),
+    supplierId: integer("supplier_id").notNull().references(() => suppliersTable.id, { onDelete: "restrict" }),
+    invoiceNumber: text("invoice_number").notNull(),
+    purchaseDate: date("purchase_date").notNull(),
+    totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_purchases_pharmacy_id").on(table.pharmacyId),
+  ]
+);
 
 export const purchaseItemsTable = pgTable("purchase_items", {
   id: serial("id").primaryKey(),

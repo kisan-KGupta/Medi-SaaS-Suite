@@ -7,6 +7,8 @@ import {
   GetSaleParams,
 } from "@workspace/api-zod";
 import { requireAuth } from "./auth";
+import { requirePermission } from "../middlewares/rbac";
+import { subscriptionCheckMiddleware } from "../middlewares/subscription";
 
 const router: IRouter = Router();
 
@@ -14,6 +16,7 @@ async function enrichSale(row: typeof salesTable.$inferSelect) {
   const items = await db.select().from(saleItemsTable).where(eq(saleItemsTable.saleId, row.id));
   return {
     id: row.id,
+    pharmacyId: row.pharmacyId,
     billNumber: row.billNumber,
     customerId: row.customerId,
     customerName: row.customerName,
@@ -25,7 +28,7 @@ async function enrichSale(row: typeof salesTable.$inferSelect) {
     totalAmount: parseFloat(row.totalAmount),
     paidAmount: parseFloat(row.paidAmount),
     isCredit: row.isCredit,
-    items: items.map(item => ({
+    items: items.map((item: any) => ({
       id: item.id,
       medicineId: item.medicineId,
       medicineName: item.medicineName,
@@ -39,18 +42,24 @@ async function enrichSale(row: typeof salesTable.$inferSelect) {
   };
 }
 
-function generateBillNumber(): string {
+function generateBillNumber(pharmacyId: number): string {
   const now = new Date();
   const ymd = now.toISOString().slice(0, 10).replace(/-/g, "");
   const random = Math.floor(1000 + Math.random() * 9000);
-  return `SM-${ymd}-${random}`;
+  return `SM-${pharmacyId}-${ymd}-${random}`;
 }
 
-router.get("/sales", requireAuth, async (req, res): Promise<void> => {
+router.get("/sales", requireAuth, subscriptionCheckMiddleware, requirePermission("sale.view"), async (req: any, res): Promise<void> => {
   const q = ListSalesQueryParams.safeParse(req.query);
   if (!q.success) { res.status(400).json({ error: q.error.message }); return; }
 
+  const pharmacyId = req.user.pharmacyId;
   const conditions: any[] = [];
+
+  if (!req.user.isSuperAdmin && pharmacyId) {
+    conditions.push(eq(salesTable.pharmacyId, pharmacyId));
+  }
+
   if (q.data.startDate) conditions.push(gte(salesTable.saleDate, q.data.startDate));
   if (q.data.endDate) conditions.push(lte(salesTable.saleDate, q.data.endDate));
 
@@ -61,10 +70,17 @@ router.get("/sales", requireAuth, async (req, res): Promise<void> => {
   res.json(results);
 });
 
-router.post("/sales", requireAuth, async (req, res): Promise<void> => {
+router.post("/sales", requireAuth, subscriptionCheckMiddleware, requirePermission("sale.create"), async (req: any, res): Promise<void> => {
   const parsed = CreateSaleBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
+  const pharmacyId = req.user.pharmacyId;
+  if (!pharmacyId && !req.user.isSuperAdmin) {
+    res.status(403).json({ error: "Pharmacy tenant missing" });
+    return;
+  }
+
+  const activePharmacyId = pharmacyId ?? (req.body.pharmacyId || 1);
   const { items, ...saleData } = parsed.data;
 
   // Calculate totals
@@ -73,8 +89,14 @@ router.post("/sales", requireAuth, async (req, res): Promise<void> => {
   const saleItems: Array<{ medicineId: number; name: string; qty: number; price: number; discount: number; vatPct: number; total: number }> = [];
 
   for (const item of items) {
-    const [med] = await db.select().from(medicinesTable).where(eq(medicinesTable.id, item.medicineId));
-    if (!med) { res.status(400).json({ error: `Medicine ${item.medicineId} not found` }); return; }
+    // Tenant check on medicine item
+    const medConditions = [eq(medicinesTable.id, item.medicineId)];
+    if (!req.user.isSuperAdmin && activePharmacyId) {
+      medConditions.push(eq(medicinesTable.pharmacyId, activePharmacyId));
+    }
+
+    const [med] = await db.select().from(medicinesTable).where(and(...medConditions));
+    if (!med) { res.status(400).json({ error: `Medicine ${item.medicineId} not found in pharmacy inventory` }); return; }
     if (med.quantity < item.quantity) { res.status(400).json({ error: `Insufficient stock for ${med.name}` }); return; }
 
     const discount = item.discount ?? 0;
@@ -94,7 +116,8 @@ router.post("/sales", requireAuth, async (req, res): Promise<void> => {
   const today = new Date().toISOString().split("T")[0];
 
   const [sale] = await db.insert(salesTable).values({
-    billNumber: generateBillNumber(),
+    pharmacyId: activePharmacyId,
+    billNumber: generateBillNumber(activePharmacyId),
     customerId: saleData.customerId,
     customerName: saleData.customerName,
     customerPhone: saleData.customerPhone,
@@ -137,10 +160,17 @@ router.post("/sales", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(await enrichSale(sale));
 });
 
-router.get("/sales/:id", requireAuth, async (req, res): Promise<void> => {
+router.get("/sales/:id", requireAuth, subscriptionCheckMiddleware, requirePermission("sale.view"), async (req: any, res): Promise<void> => {
   const params = GetSaleParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const [row] = await db.select().from(salesTable).where(eq(salesTable.id, params.data.id));
+
+  const pharmacyId = req.user.pharmacyId;
+  const conditions = [eq(salesTable.id, params.data.id)];
+  if (!req.user.isSuperAdmin && pharmacyId) {
+    conditions.push(eq(salesTable.pharmacyId, pharmacyId));
+  }
+
+  const [row] = await db.select().from(salesTable).where(and(...conditions));
   if (!row) { res.status(404).json({ error: "Sale not found" }); return; }
   res.json(await enrichSale(row));
 });

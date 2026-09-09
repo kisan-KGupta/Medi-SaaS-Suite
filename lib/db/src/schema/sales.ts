@@ -1,24 +1,33 @@
-import { pgTable, text, serial, timestamp, integer, numeric, boolean, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, numeric, boolean, date, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { customersTable } from "./customers";
 import { medicinesTable } from "./medicines";
+import { pharmaciesTable } from "./pharmacies";
 
-export const salesTable = pgTable("sales", {
-  id: serial("id").primaryKey(),
-  billNumber: text("bill_number").notNull().unique(),
-  customerId: integer("customer_id").references(() => customersTable.id, { onDelete: "set null" }),
-  customerName: text("customer_name"),
-  customerPhone: text("customer_phone"),
-  saleDate: date("sale_date").notNull(),
-  subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
-  discountAmount: numeric("discount_amount", { precision: 12, scale: 2 }).notNull().default("0"),
-  vatAmount: numeric("vat_amount", { precision: 12, scale: 2 }).notNull().default("0"),
-  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
-  paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }).notNull().default("0"),
-  isCredit: boolean("is_credit").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const salesTable = pgTable(
+  "sales",
+  {
+    id: serial("id").primaryKey(),
+    pharmacyId: integer("pharmacy_id").notNull().references(() => pharmaciesTable.id, { onDelete: "cascade" }),
+    billNumber: text("bill_number").notNull(),
+    customerId: integer("customer_id").references(() => customersTable.id, { onDelete: "set null" }),
+    customerName: text("customer_name"),
+    customerPhone: text("customer_phone"),
+    saleDate: date("sale_date").notNull(),
+    subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
+    discountAmount: numeric("discount_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    vatAmount: numeric("vat_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+    paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    isCredit: boolean("is_credit").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_sales_pharmacy_id").on(table.pharmacyId),
+    uniqueIndex("idx_sales_pharmacy_bill").on(table.pharmacyId, table.billNumber),
+  ]
+);
 
 export const saleItemsTable = pgTable("sale_items", {
   id: serial("id").primaryKey(),
