@@ -7,11 +7,11 @@
 set -e
 
 echo "==> Running DB schema push..."
-cd lib/db && npx drizzle-kit push --config=drizzle.config.ts
+cd lib/db && npx --yes drizzle-kit push --config=drizzle.config.ts
 cd ../..
 
 echo "==> Seeding demo data..."
-npx tsx scripts/src/seed.ts
+npx --yes tsx scripts/src/seed.ts
 
 echo "==> Starting API server..."
 node --enable-source-maps ./artifacts/api-server/dist/index.mjs
