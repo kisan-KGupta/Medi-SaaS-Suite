@@ -12,4 +12,4 @@ if (Number.isNaN(port) || port <= 0) {
 app.listen(port, "0.0.0.0", () => {
   logger.info({ port }, "Server listening");
 });
-});
+
