@@ -11,10 +11,15 @@ export let db: any;
 export let pool: any = null;
 
 if (process.env.DATABASE_URL) {
-  const isLocal = process.env.DATABASE_URL.includes("localhost") || process.env.DATABASE_URL.includes("127.0.0.1");
+  const noSsl =
+    process.env.DATABASE_URL.includes("localhost") ||
+    process.env.DATABASE_URL.includes("127.0.0.1") ||
+    process.env.DATABASE_URL.includes("railway.internal") ||
+    process.env.DATABASE_URL.includes("sslmode=disable");
+
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: isLocal ? false : { rejectUnauthorized: false }
+    ssl: noSsl ? false : { rejectUnauthorized: false }
   });
 
   pool.on("error", (err: any) => {
