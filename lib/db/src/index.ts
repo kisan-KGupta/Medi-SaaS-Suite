@@ -12,7 +12,16 @@ export let db: any;
 export let pool: any = null;
 
 if (process.env.DATABASE_URL) {
-  pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const isLocal = process.env.DATABASE_URL.includes("localhost") || process.env.DATABASE_URL.includes("127.0.0.1");
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: isLocal ? false : { rejectUnauthorized: false }
+  });
+
+  pool.on("error", (err: any) => {
+    console.error("Postgres pool error:", err?.message || err);
+  });
+
   db = drizzlePg(pool, { schema });
   initPostgresSchema(pool).catch((err) => {
     console.error("Failed to auto-init Postgres schema:", err);
