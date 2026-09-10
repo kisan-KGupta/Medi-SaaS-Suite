@@ -14,6 +14,9 @@ export let pool: any = null;
 if (process.env.DATABASE_URL) {
   pool = new Pool({ connectionString: process.env.DATABASE_URL });
   db = drizzlePg(pool, { schema });
+  initPostgresSchema(pool).catch((err) => {
+    console.error("Failed to auto-init Postgres schema:", err);
+  });
 } else {
   console.log("ℹ️ DATABASE_URL not set — Initializing PGLite (in-memory Postgres DB)...");
   const pglite = new PGlite();
@@ -215,6 +218,188 @@ export async function initPgliteSchema(pglite: PGlite) {
     );
   `);
   console.log("✓ PGLite schema initialized");
+}
+
+export async function initPostgresSchema(poolClient: any) {
+  try {
+    await poolClient.query(`
+      DO $$ BEGIN
+        CREATE TYPE pharmacy_status AS ENUM ('ACTIVE', 'SUSPENDED', 'INACTIVE');
+      EXCEPTION WHEN duplicate_object THEN null; END $$;
+      DO $$ BEGIN
+        CREATE TYPE user_status AS ENUM ('ACTIVE', 'SUSPENDED', 'INACTIVE');
+      EXCEPTION WHEN duplicate_object THEN null; END $$;
+      DO $$ BEGIN
+        CREATE TYPE role_enum AS ENUM ('admin', 'cashier', 'inventory_manager');
+      EXCEPTION WHEN duplicate_object THEN null; END $$;
+      DO $$ BEGIN
+        CREATE TYPE subscription_status AS ENUM ('TRIAL', 'ACTIVE', 'EXPIRED', 'SUSPENDED', 'CANCELLED');
+      EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+      CREATE TABLE IF NOT EXISTS pharmacies (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        address TEXT,
+        phone TEXT,
+        email TEXT,
+        logo TEXT,
+        status pharmacy_status NOT NULL DEFAULT 'ACTIVE',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS roles (
+        id SERIAL PRIMARY KEY,
+        pharmacy_id INTEGER REFERENCES pharmacies(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        description TEXT,
+        is_system BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS permissions (
+        id SERIAL PRIMARY KEY,
+        key TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        module TEXT NOT NULL,
+        description TEXT
+      );
+      CREATE TABLE IF NOT EXISTS role_permissions (
+        role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+        permission_id INTEGER NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+        PRIMARY KEY (role_id, permission_id)
+      );
+      CREATE TABLE IF NOT EXISTS plans (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        price_monthly NUMERIC(12, 2) NOT NULL,
+        price_yearly NUMERIC(12, 2) NOT NULL,
+        status TEXT NOT NULL DEFAULT 'ACTIVE',
+        features TEXT[],
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id SERIAL PRIMARY KEY,
+        pharmacy_id INTEGER NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
+        plan_id TEXT NOT NULL REFERENCES plans(id),
+        status subscription_status NOT NULL DEFAULT 'TRIAL',
+        start_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        end_date TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        pharmacy_id INTEGER REFERENCES pharmacies(id) ON DELETE CASCADE,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role role_enum NOT NULL DEFAULT 'cashier',
+        role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL,
+        is_super_admin BOOLEAN NOT NULL DEFAULT FALSE,
+        status user_status NOT NULL DEFAULT 'ACTIVE',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS categories (
+        id SERIAL PRIMARY KEY,
+        pharmacy_id INTEGER NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        description TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS suppliers (
+        id SERIAL PRIMARY KEY,
+        pharmacy_id INTEGER NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        contact_person TEXT,
+        phone TEXT,
+        email TEXT,
+        address TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS medicines (
+        id SERIAL PRIMARY KEY,
+        pharmacy_id INTEGER NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        generic_name TEXT NOT NULL,
+        brand_name TEXT,
+        category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+        batch_number TEXT NOT NULL,
+        barcode TEXT,
+        expiry_date DATE NOT NULL,
+        quantity INTEGER NOT NULL DEFAULT 0,
+        purchase_price NUMERIC(12, 2) NOT NULL,
+        selling_price NUMERIC(12, 2) NOT NULL,
+        vat_percent NUMERIC(5, 2) NOT NULL DEFAULT 0,
+        supplier_id INTEGER REFERENCES suppliers(id) ON DELETE SET NULL,
+        storage_location TEXT,
+        reorder_level INTEGER NOT NULL DEFAULT 10,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS customers (
+        id SERIAL PRIMARY KEY,
+        pharmacy_id INTEGER NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        phone TEXT,
+        email TEXT,
+        address TEXT,
+        credit_balance NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS purchases (
+        id SERIAL PRIMARY KEY,
+        pharmacy_id INTEGER NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
+        supplier_id INTEGER NOT NULL REFERENCES suppliers(id) ON DELETE RESTRICT,
+        invoice_number TEXT NOT NULL,
+        purchase_date DATE NOT NULL,
+        total_amount NUMERIC(12, 2) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS purchase_items (
+        id SERIAL PRIMARY KEY,
+        purchase_id INTEGER NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
+        medicine_id INTEGER NOT NULL REFERENCES medicines(id) ON DELETE RESTRICT,
+        medicine_name TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        purchase_price NUMERIC(12, 2) NOT NULL,
+        batch_number TEXT NOT NULL,
+        expiry_date DATE NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS sales (
+        id SERIAL PRIMARY KEY,
+        pharmacy_id INTEGER NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
+        bill_number TEXT NOT NULL,
+        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+        customer_name TEXT,
+        customer_phone TEXT,
+        sale_date DATE NOT NULL,
+        subtotal NUMERIC(12, 2) NOT NULL,
+        discount_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        vat_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        total_amount NUMERIC(12, 2) NOT NULL,
+        paid_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        is_credit BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS sale_items (
+        id SERIAL PRIMARY KEY,
+        sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+        medicine_id INTEGER NOT NULL REFERENCES medicines(id) ON DELETE RESTRICT,
+        medicine_name TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        unit_price NUMERIC(12, 2) NOT NULL,
+        discount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        vat_percent NUMERIC(5, 2) NOT NULL DEFAULT 0,
+        total NUMERIC(12, 2) NOT NULL
+      );
+    `);
+    console.log("✓ Postgres schema initialized");
+  } catch (err: any) {
+    console.error("Postgres schema init notice:", err?.message || err);
+  }
 }
 
 async function seedPgliteData() {
