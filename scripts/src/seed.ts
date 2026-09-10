@@ -218,6 +218,10 @@ export async function seedDatabase() {
       isSuperAdmin: true,
       status: "ACTIVE"
     });
+  } else {
+    await db.update(usersTable)
+      .set({ passwordHash: hashPassword("admin123"), status: "ACTIVE" })
+      .where(eq(usersTable.id, superadmin.id));
   }
 
   // Pharmacy Admin user
@@ -234,9 +238,9 @@ export async function seedDatabase() {
       isSuperAdmin: false,
       status: "ACTIVE"
     });
-  } else if (!adminUser.pharmacyId || !adminUser.roleId) {
+  } else {
     await db.update(usersTable)
-      .set({ pharmacyId: pharmacy.id, roleId: adminRoleId })
+      .set({ pharmacyId: pharmacy.id, roleId: adminRoleId, passwordHash: hashPassword("admin123"), status: "ACTIVE" })
       .where(eq(usersTable.id, adminUser.id));
   }
 
@@ -254,9 +258,9 @@ export async function seedDatabase() {
       isSuperAdmin: false,
       status: "ACTIVE"
     });
-  } else if (!cashierUser.pharmacyId || !cashierUser.roleId) {
+  } else {
     await db.update(usersTable)
-      .set({ pharmacyId: pharmacy.id, roleId: cashierRoleId })
+      .set({ pharmacyId: pharmacy.id, roleId: cashierRoleId, passwordHash: hashPassword("cashier123"), status: "ACTIVE" })
       .where(eq(usersTable.id, cashierUser.id));
   }
 

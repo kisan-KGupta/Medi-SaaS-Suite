@@ -335,39 +335,60 @@ async function seedPgliteData() {
 
   // 6. Seed Users
   // Super Admin
-  await db.insert(usersTable).values({
-    pharmacyId: null,
-    username: "superadmin",
-    passwordHash: hashPassword("admin123"),
-    name: "SaaS Super Admin",
-    role: "admin",
-    isSuperAdmin: true,
-    status: "ACTIVE"
-  }).onConflictDoNothing();
+  const [superadmin] = await db.select().from(usersTable).where(eq(usersTable.username, "superadmin"));
+  if (!superadmin) {
+    await db.insert(usersTable).values({
+      pharmacyId: null,
+      username: "superadmin",
+      passwordHash: hashPassword("admin123"),
+      name: "SaaS Super Admin",
+      role: "admin",
+      isSuperAdmin: true,
+      status: "ACTIVE"
+    });
+  } else {
+    await db.update(usersTable)
+      .set({ passwordHash: hashPassword("admin123"), status: "ACTIVE" })
+      .where(eq(usersTable.id, superadmin.id));
+  }
 
   // Pharmacy Admin user
-  await db.insert(usersTable).values({
-    pharmacyId: pharmId,
-    username: "admin",
-    passwordHash: hashPassword("admin123"),
-    name: "Sanjay Medical Admin",
-    role: "admin",
-    roleId: adminRoleId,
-    isSuperAdmin: false,
-    status: "ACTIVE"
-  }).onConflictDoNothing();
+  const [adminUser] = await db.select().from(usersTable).where(eq(usersTable.username, "admin"));
+  if (!adminUser) {
+    await db.insert(usersTable).values({
+      pharmacyId: pharmId,
+      username: "admin",
+      passwordHash: hashPassword("admin123"),
+      name: "Sanjay Medical Admin",
+      role: "admin",
+      roleId: adminRoleId,
+      isSuperAdmin: false,
+      status: "ACTIVE"
+    });
+  } else {
+    await db.update(usersTable)
+      .set({ pharmacyId: pharmId, roleId: adminRoleId, passwordHash: hashPassword("admin123"), status: "ACTIVE" })
+      .where(eq(usersTable.id, adminUser.id));
+  }
 
   // Cashier user
-  await db.insert(usersTable).values({
-    pharmacyId: pharmId,
-    username: "cashier",
-    passwordHash: hashPassword("cashier123"),
-    name: "Main Counter Cashier",
-    role: "cashier",
-    roleId: cashierRoleId,
-    isSuperAdmin: false,
-    status: "ACTIVE"
-  }).onConflictDoNothing();
+  const [cashierUser] = await db.select().from(usersTable).where(eq(usersTable.username, "cashier"));
+  if (!cashierUser) {
+    await db.insert(usersTable).values({
+      pharmacyId: pharmId,
+      username: "cashier",
+      passwordHash: hashPassword("cashier123"),
+      name: "Main Counter Cashier",
+      role: "cashier",
+      roleId: cashierRoleId,
+      isSuperAdmin: false,
+      status: "ACTIVE"
+    });
+  } else {
+    await db.update(usersTable)
+      .set({ pharmacyId: pharmId, roleId: cashierRoleId, passwordHash: hashPassword("cashier123"), status: "ACTIVE" })
+      .where(eq(usersTable.id, cashierUser.id));
+  }
 
   // 7. Seed Demo Category, Supplier, Medicines
   const [cat] = await db.insert(categoriesTable).values({
