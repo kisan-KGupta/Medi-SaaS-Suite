@@ -2,6 +2,7 @@ import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { eq } from "drizzle-orm";
 import { randomBytes, scryptSync } from "crypto";
+import type { PGlite } from "@electric-sql/pglite";
 import * as schema from "./schema";
 
 const { Pool } = pg;
@@ -21,9 +22,11 @@ if (process.env.DATABASE_URL) {
   });
 
   db = drizzlePg(pool, { schema });
-  initPostgresSchema(pool).catch((err) => {
-    console.error("Failed to auto-init Postgres schema:", err);
-  });
+  initPostgresSchema(pool)
+    .then(() => seedData())
+    .catch((err) => {
+      console.error("Failed to auto-init Postgres schema:", err);
+    });
 } else {
   console.log("ℹ️ DATABASE_URL not set — Initializing PGLite (in-memory Postgres DB)...");
   Promise.all([
@@ -33,7 +36,7 @@ if (process.env.DATABASE_URL) {
     const pglite = new PGlite();
     db = drizzlePglite({ client: pglite, schema });
     initPgliteSchema(pglite)
-      .then(() => seedPgliteData())
+      .then(() => seedData())
       .catch((err) => {
         console.error("Failed to initialize PGLite schema:", err);
       });
@@ -414,7 +417,7 @@ export async function initPostgresSchema(poolClient: any) {
   }
 }
 
-async function seedPgliteData() {
+async function seedData() {
   const {
     pharmaciesTable,
     rolesTable,

@@ -3,11 +3,7 @@ import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import App from "./App";
 import "./index.css";
 
-// In production (Vercel), point API calls at the Railway backend.
-// In development, Vite's proxy forwards /api/* to localhost:5000.
-const apiUrl =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.PROD ? "https://medi-saas-suite-production.up.railway.app" : "");
+const apiUrl = import.meta.env.VITE_API_URL || "";
 if (apiUrl) {
   setBaseUrl(apiUrl);
 }
