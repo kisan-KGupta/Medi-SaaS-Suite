@@ -1,6 +1,4 @@
 import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
-import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
-import { PGlite } from "@electric-sql/pglite";
 import pg from "pg";
 import { eq } from "drizzle-orm";
 import { randomBytes, scryptSync } from "crypto";
@@ -28,15 +26,20 @@ if (process.env.DATABASE_URL) {
   });
 } else {
   console.log("ℹ️ DATABASE_URL not set — Initializing PGLite (in-memory Postgres DB)...");
-  const pglite = new PGlite();
-  db = drizzlePglite({ client: pglite, schema });
-  
-  // Provision schema DDL for in-memory PGLite and auto-seed
-  initPgliteSchema(pglite)
-    .then(() => seedPgliteData())
-    .catch((err) => {
-      console.error("Failed to initialize PGLite schema:", err);
-    });
+  Promise.all([
+    import("@electric-sql/pglite"),
+    import("drizzle-orm/pglite")
+  ]).then(([{ PGlite }, { drizzle: drizzlePglite }]) => {
+    const pglite = new PGlite();
+    db = drizzlePglite({ client: pglite, schema });
+    initPgliteSchema(pglite)
+      .then(() => seedPgliteData())
+      .catch((err) => {
+        console.error("Failed to initialize PGLite schema:", err);
+      });
+  }).catch((err) => {
+    console.error("Failed to load PGLite:", err);
+  });
 }
 
 function hashPassword(password: string): string {
