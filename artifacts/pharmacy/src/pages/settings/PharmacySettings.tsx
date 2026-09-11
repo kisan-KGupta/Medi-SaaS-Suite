@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { useGetMe } from "@workspace/api-client-react";
+import { useGetMe, customFetch } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Building, Save, ShieldCheck, Image as ImageIcon } from "lucide-react";
+import { normalizeLogoUrl } from "../admin/Pharmacies";
 
 export default function PharmacySettings() {
   const { toast } = useToast();
@@ -19,11 +20,7 @@ export default function PharmacySettings() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("pharmacy_token");
-    fetch("/api/pharmacy/settings", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
+    customFetch<any>("/api/pharmacy/settings")
       .then((data) => {
         if (data) {
           if (data.name) setName(data.name);
@@ -41,16 +38,12 @@ export default function PharmacySettings() {
     e.preventDefault();
     setSaving(true);
     try {
-      const token = localStorage.getItem("pharmacy_token");
-      const res = await fetch("/api/pharmacy/settings", {
+      const normalizedLogo = normalizeLogoUrl(logo);
+      await customFetch("/api/pharmacy/settings", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name, logo, address, phone, email }),
+        body: JSON.stringify({ name, logo: normalizedLogo, address, phone, email }),
       });
-      if (!res.ok) throw new Error("Failed to update settings");
+      setLogo(normalizedLogo);
       toast({
         title: "Settings Saved",
         description: "Pharmacy store profile and logo updated successfully.",

@@ -1,10 +1,29 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Building, Plus, ShieldCheck, AlertTriangle, CheckCircle, Search, Edit3, Image as ImageIcon } from "lucide-react";
+
+export function normalizeLogoUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:")) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("/9j/")) {
+    return `data:image/jpeg;base64,${trimmed}`;
+  }
+  if (trimmed.startsWith("iVBORw0KGgo")) {
+    return `data:image/png;base64,${trimmed}`;
+  }
+  if (trimmed.startsWith("PHN2Zy") || trimmed.startsWith("<svg")) {
+    return `data:image/svg+xml;utf8,${trimmed}`;
+  }
+  return `data:image/png;base64,${trimmed}`;
+}
 
 export default function Pharmacies() {
   const { toast } = useToast();
@@ -38,29 +57,19 @@ export default function Pharmacies() {
   const { data: pharmacies, isLoading } = useQuery({
     queryKey: ["/api/saas/pharmacies"],
     queryFn: async () => {
-      const token = localStorage.getItem("pharmacy_token");
-      const res = await fetch("/api/saas/pharmacies", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to fetch pharmacies");
-      return res.json();
+      return await customFetch<any[]>("/api/saas/pharmacies");
     },
   });
 
   const createPharmacyMutation = useMutation({
     mutationFn: async (data: typeof form) => {
-      const token = localStorage.getItem("pharmacy_token");
-      const res = await fetch("/api/saas/pharmacies", {
+      return await customFetch("/api/saas/pharmacies", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          logo: normalizeLogoUrl(data.logo),
+        }),
       });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed to onboard pharmacy");
-      return result;
     },
     onSuccess: () => {
       toast({ title: "Pharmacy Onboarded", description: "New pharmacy and admin user created." });
@@ -75,24 +84,16 @@ export default function Pharmacies() {
 
   const editPharmacyMutation = useMutation({
     mutationFn: async (data: typeof editForm) => {
-      const token = localStorage.getItem("pharmacy_token");
-      const res = await fetch(`/api/saas/pharmacies/${data.id}`, {
+      return await customFetch(`/api/saas/pharmacies/${data.id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           name: data.name,
-          logo: data.logo,
+          logo: normalizeLogoUrl(data.logo),
           address: data.address,
           phone: data.phone,
           email: data.email,
         }),
       });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed to update pharmacy");
-      return result;
     },
     onSuccess: () => {
       toast({ title: "Pharmacy Updated", description: "Pharmacy details and logo updated successfully." });
@@ -106,17 +107,10 @@ export default function Pharmacies() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const token = localStorage.getItem("pharmacy_token");
-      const res = await fetch(`/api/saas/pharmacies/${id}/status`, {
+      return await customFetch(`/api/saas/pharmacies/${id}/status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Failed to update status");
-      return res.json();
     },
     onSuccess: (_, variables) => {
       toast({ title: "Status Updated", description: `Pharmacy status set to ${variables.status}.` });
