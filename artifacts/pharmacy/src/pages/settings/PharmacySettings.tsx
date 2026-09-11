@@ -21,7 +21,7 @@ export default function PharmacySettings() {
 
   useEffect(() => {
     customFetch<any>("/api/pharmacy/settings")
-      .then((data) => {
+      .then((data: any) => {
         if (data) {
           if (data.name) setName(data.name);
           if (data.logo) setLogo(data.logo);
@@ -30,7 +30,7 @@ export default function PharmacySettings() {
           if (data.email) setEmail(data.email);
         }
       })
-      .catch((err) => console.error("Failed to load pharmacy settings:", err))
+      .catch((err: any) => console.error("Failed to load pharmacy settings:", err))
       .finally(() => setLoading(false));
   }, []);
 
