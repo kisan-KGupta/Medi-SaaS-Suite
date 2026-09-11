@@ -14,6 +14,59 @@ import { requireAuth, hashPassword } from "./auth";
 
 const router: IRouter = Router();
 
+// GET /api/pharmacy/settings - Fetch active pharmacy settings
+router.get("/pharmacy/settings", requireAuth, async (req: any, res): Promise<void> => {
+  const pharmacyId = req.pharmacyId;
+  if (!pharmacyId) {
+    res.json({
+      name: "Sanjay Medical Pharmacy",
+      address: "Horizon Chowk, Butwal, Nepal",
+      phone: "+977 9800000000",
+      email: "contact@sanjaymedical.com",
+      logo: "",
+    });
+    return;
+  }
+  const [pharmacy] = await db.select().from(pharmaciesTable).where(eq(pharmaciesTable.id, pharmacyId));
+  if (!pharmacy) {
+    res.status(404).json({ error: "Pharmacy not found" });
+    return;
+  }
+  res.json(pharmacy);
+});
+
+// PATCH /api/pharmacy/settings - Update active pharmacy settings
+router.patch("/pharmacy/settings", requireAuth, async (req: any, res): Promise<void> => {
+  const pharmacyId = req.pharmacyId ?? 1;
+
+  const { name, logo, address, phone, email } = req.body;
+  const updateFields: Record<string, any> = {};
+  if (name !== undefined) updateFields.name = name;
+  if (logo !== undefined) updateFields.logo = logo;
+  if (address !== undefined) updateFields.address = address;
+  if (phone !== undefined) updateFields.phone = phone;
+  if (email !== undefined) updateFields.email = email;
+
+  let [updated] = await db.update(pharmaciesTable)
+    .set(updateFields)
+    .where(eq(pharmaciesTable.id, pharmacyId))
+    .returning();
+
+  if (!updated) {
+    // If demo pharmacy ID 1 doesn't exist yet, insert it
+    [updated] = await db.insert(pharmaciesTable).values({
+      name: name || "Sanjay Medical Pharmacy",
+      address: address || "Horizon Chowk, Butwal, Nepal",
+      phone: phone || "+977 9800000000",
+      email: email || "contact@sanjaymedical.com",
+      logo: logo || null,
+      status: "ACTIVE",
+    }).returning();
+  }
+
+  res.json(updated);
+});
+
 // Middleware to ensure user is SaaS Super Admin
 function requireSuperAdmin(req: any, res: any, next: any): void {
   if (!req.user || !req.user.isSuperAdmin) {
@@ -62,6 +115,7 @@ router.get("/saas/pharmacies", requireAuth, requireSuperAdmin, async (_req, res)
         address: p.address,
         phone: p.phone,
         email: p.email,
+        logo: p.logo,
         status: p.status,
         planName,
         subscriptionStatus: sub?.status ?? "TRIAL",
@@ -76,7 +130,7 @@ router.get("/saas/pharmacies", requireAuth, requireSuperAdmin, async (_req, res)
 
 // POST /api/saas/pharmacies - Create new pharmacy (Onboarding by Super Admin)
 router.post("/saas/pharmacies", requireAuth, requireSuperAdmin, async (req, res): Promise<void> => {
-  const { name, address, phone, email, adminName, adminEmail, adminPassword, planId } = req.body;
+  const { name, logo, address, phone, email, adminName, adminEmail, adminPassword, planId } = req.body;
 
   if (!name || !adminEmail || !adminPassword) {
     res.status(400).json({ error: "Pharmacy name, admin email, and password are required" });
@@ -86,6 +140,7 @@ router.post("/saas/pharmacies", requireAuth, requireSuperAdmin, async (req, res)
   // 1. Create pharmacy
   const [pharmacy] = await db.insert(pharmaciesTable).values({
     name,
+    logo: logo || null,
     address: address || null,
     phone: phone || null,
     email: email || adminEmail,
@@ -128,10 +183,40 @@ router.post("/saas/pharmacies", requireAuth, requireSuperAdmin, async (req, res)
   }).returning();
 
   res.status(201).json({
-    pharmacy: { id: pharmacy.id, name: pharmacy.name, status: pharmacy.status },
+    pharmacy: { id: pharmacy.id, name: pharmacy.name, logo: pharmacy.logo, status: pharmacy.status },
     admin: { id: adminUser.id, username: adminUser.username },
     subscription: { id: sub.id, status: sub.status, planId: sub.planId },
   });
+});
+
+// PATCH /api/saas/pharmacies/:id - Update Pharmacy Details (Name, Logo, Address, Phone, Email)
+router.patch("/saas/pharmacies/:id", requireAuth, requireSuperAdmin, async (req, res): Promise<void> => {
+  const pharmacyId = parseInt(req.params.id);
+  const { name, logo, address, phone, email } = req.body;
+
+  const updateFields: Record<string, any> = {};
+  if (name !== undefined) updateFields.name = name;
+  if (logo !== undefined) updateFields.logo = logo;
+  if (address !== undefined) updateFields.address = address;
+  if (phone !== undefined) updateFields.phone = phone;
+  if (email !== undefined) updateFields.email = email;
+
+  if (Object.keys(updateFields).length === 0) {
+    res.status(400).json({ error: "No fields provided to update" });
+    return;
+  }
+
+  const [updatedPharmacy] = await db.update(pharmaciesTable)
+    .set(updateFields)
+    .where(eq(pharmaciesTable.id, pharmacyId))
+    .returning();
+
+  if (!updatedPharmacy) {
+    res.status(404).json({ error: "Pharmacy not found" });
+    return;
+  }
+
+  res.json(updatedPharmacy);
 });
 
 // PATCH /api/saas/pharmacies/:id/status - Update Pharmacy Status (Activate / Suspend)

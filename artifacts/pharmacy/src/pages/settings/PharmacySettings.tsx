@@ -1,31 +1,69 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useGetMe } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Building, Save, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Building, Save, ShieldCheck, Image as ImageIcon } from "lucide-react";
 
 export default function PharmacySettings() {
   const { toast } = useToast();
   const { data: user } = useGetMe();
 
   const [name, setName] = useState((user as any)?.pharmacyName || "Sanjay Medical Pharmacy");
+  const [logo, setLogo] = useState("");
   const [address, setAddress] = useState("Horizon Chowk, Butwal, Nepal");
   const [phone, setPhone] = useState("+977 9800000000");
   const [email, setEmail] = useState("contact@sanjaymedical.com");
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("pharmacy_token");
+    fetch("/api/pharmacy/settings", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data) {
+          if (data.name) setName(data.name);
+          if (data.logo) setLogo(data.logo);
+          if (data.address) setAddress(data.address);
+          if (data.phone) setPhone(data.phone);
+          if (data.email) setEmail(data.email);
+        }
+      })
+      .catch((err) => console.error("Failed to load pharmacy settings:", err))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      const token = localStorage.getItem("pharmacy_token");
+      const res = await fetch("/api/pharmacy/settings", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, logo, address, phone, email }),
+      });
+      if (!res.ok) throw new Error("Failed to update settings");
       toast({
         title: "Settings Saved",
-        description: "Pharmacy store profile updated successfully.",
+        description: "Pharmacy store profile and logo updated successfully.",
       });
-    }, 600);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Failed to save settings",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -54,6 +92,37 @@ export default function PharmacySettings() {
               onChange={(e) => setName(e.target.value)}
               className="mt-1"
             />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+              <span>Pharmacy Logo URL</span>
+              <span className="text-[10px] text-muted-foreground font-normal">Direct image URL or Base64 data</span>
+            </label>
+            <Input
+              placeholder="https://example.com/logo.png"
+              value={logo}
+              onChange={(e) => setLogo(e.target.value)}
+              className="mt-1 font-mono text-xs"
+            />
+            {logo ? (
+              <div className="mt-2 flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/40">
+                <img
+                  src={logo}
+                  alt="Store Logo Preview"
+                  className="h-12 w-12 object-contain rounded-lg border border-border bg-white p-1 shadow-xs"
+                  onError={(e) => ((e.target as HTMLElement).style.display = "none")}
+                />
+                <div>
+                  <span className="text-xs font-bold text-foreground block">Logo Preview</span>
+                  <span className="text-[11px] text-muted-foreground">This logo will appear on POS receipts and app headers.</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                No logo uploaded yet. Paste an image URL above to display your brand logo on receipts and headers.
+              </p>
+            )}
           </div>
 
           <div>
