@@ -20,7 +20,32 @@ function generateToken(userId: number): string {
 }
 
 function verifyToken(token: string): number | null {
-  return tokenStore.get(token) ?? null;
+  if (tokenStore.has(token)) {
+    return tokenStore.get(token)!;
+  }
+  try {
+    const decoded = Buffer.from(token, "base64url").toString("utf8");
+    const lastDotIndex = decoded.lastIndexOf(".");
+    if (lastDotIndex === -1) return null;
+    const payload = decoded.slice(0, lastDotIndex);
+    const sig = decoded.slice(lastDotIndex + 1);
+
+    const expectedSig = createHmac("sha256", SESSION_SECRET).update(payload).digest("hex");
+    const sigBuffer = Buffer.from(sig);
+    const expectedBuffer = Buffer.from(expectedSig);
+    if (sigBuffer.length !== expectedBuffer.length || !timingSafeEqual(sigBuffer, expectedBuffer)) {
+      return null;
+    }
+
+    const [userIdStr] = payload.split(":");
+    const userId = parseInt(userIdStr, 10);
+    if (isNaN(userId)) return null;
+
+    tokenStore.set(token, userId);
+    return userId;
+  } catch {
+    return null;
+  }
 }
 
 export function hashPassword(password: string): string {
