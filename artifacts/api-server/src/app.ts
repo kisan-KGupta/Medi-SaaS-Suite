@@ -53,8 +53,8 @@ app.use(
     },
   }),
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // ─── Health check endpoints (for Railway / monitoring) ────────────────────────
 app.get("/", (_req, res) => {
@@ -75,4 +75,12 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api", router);
 
+// Global Error Handler - Return JSON instead of HTML on error (e.g. 413, 500)
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+  res.status(status).json({ error: message });
+});
+
 export default app;
+
