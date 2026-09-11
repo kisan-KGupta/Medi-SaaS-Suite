@@ -249,9 +249,11 @@ router.get("/auth/me", requireAuth, async (req: any, res): Promise<void> => {
   const user = req.user;
 
   let pharmacyName = null;
+  let pharmacyLogo = null;
   if (user.pharmacyId) {
     const [pharmacy] = await db.select().from(pharmaciesTable).where(eq(pharmaciesTable.id, user.pharmacyId));
     pharmacyName = pharmacy?.name ?? null;
+    pharmacyLogo = pharmacy?.logo ?? null;
   }
 
   const permissions = await getRolePermissions(user.roleId, user.isSuperAdmin);
@@ -263,6 +265,7 @@ router.get("/auth/me", requireAuth, async (req: any, res): Promise<void> => {
     role: user.role,
     pharmacyId: user.pharmacyId,
     pharmacyName,
+    pharmacyLogo,
     roleId: user.roleId,
     isSuperAdmin: user.isSuperAdmin,
     status: user.status,

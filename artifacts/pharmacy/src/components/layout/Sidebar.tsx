@@ -32,7 +32,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const { data: user } = useGetMe();
 
   const isSuperAdmin = Boolean(user && (user as any).isSuperAdmin);
-  const pharmacyName = (user as any)?.pharmacyName || "Sanjay Medical";
+  const pharmacyName = (user as any)?.pharmacyName || "My Pharmacy";
+  const pharmacyLogo = (user as any)?.pharmacyLogo || null;
   const alertCount = (summary?.expiringCount ?? 0) + (summary?.expiredCount ?? 0);
 
   const navGroups = [
@@ -114,8 +115,17 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         {/* Brand */}
         <div className="flex h-16 items-center justify-between px-5 border-b border-[hsl(var(--sidebar-border))]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20">
-              <Stethoscope className="h-4 w-4 text-primary" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/20 overflow-hidden shrink-0">
+              {pharmacyLogo ? (
+                <img
+                  src={pharmacyLogo}
+                  alt={pharmacyName}
+                  className="w-8 h-8 object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : (
+                <Stethoscope className="h-4 w-4 text-primary" />
+              )}
             </div>
             <div className="overflow-hidden">
               <div className="text-sm font-bold tracking-tight text-white leading-none truncate">
